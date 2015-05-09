@@ -1,9 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"os"
+	"time"
 
 	"github.com/codegangsta/cli"
+	"github.com/devton/xporter/policies"
 	"github.com/fatih/color"
 )
 
@@ -24,12 +27,12 @@ func main() {
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "crawled-files, cf",
-					Value: "~/crawled_data/",
+					Value: "/path/to/crawled_data/",
 					Usage: "folder with downloaded HTML pages",
 				},
 				cli.StringFlag{
-					Name:  "policies-files, pf",
-					Value: "~/crawler-json-policies/",
+					Name:  "policies-path, pf",
+					Value: "/path/to/.crawler-json-policies/",
 					Usage: "folder with json policies to extract data",
 				},
 				cli.StringFlag{
@@ -45,6 +48,14 @@ func main() {
 			},
 			Action: func(c *cli.Context) {
 				color.Green("starting crawler...")
+				for {
+					policiesFound := policies.FindPolicies(c.String("policies-path"))
+					fmt.Printf("policies found -> \n%v\n", policiesFound)
+					select {
+					case <-time.After(30 * time.Minute):
+						color.Green("rerunning crawler... ;)")
+					}
+				}
 			},
 		},
 	}
