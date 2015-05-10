@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path"
 	"path/filepath"
 	"time"
 
+	"github.com/PuerkitoBio/goquery"
 	"github.com/devton/xporter/policies"
 	"github.com/devton/xporter/xutils"
 	"github.com/fatih/color"
@@ -85,6 +87,14 @@ func SearchDataFor(p *policies.Policy) error {
 			fmt.Printf("%s scraping page file -> %s\n",
 				xutils.ColorSprint(color.FgYellow, "[crawler-scraper]"),
 				xutils.ColorSprint(color.FgGreen, item))
+
+			b, _ := os.Open(item)
+			queryDoc, _ := goquery.NewDocumentFromReader(b)
+
+			for k, v := range p.Fields {
+				fmt.Printf("%s -> %s\n", k, queryDoc.Find(v).Text())
+			}
+			b.Close()
 		}
 	}
 

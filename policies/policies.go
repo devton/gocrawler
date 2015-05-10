@@ -14,9 +14,10 @@ var policyLogTag = "[policy-finder]"
 var policiesFound []string
 
 type Policy struct {
-	DomainFolder      string   `json:"domain_folder"`
-	CoursePaths       []string `json:"course_paths"`
-	MaxDepthForCourse int      `json:"max_depth_to_find_course"`
+	DomainFolder      string            `json:"domain_folder"`
+	CoursePaths       []string          `json:"course_paths"`
+	MaxDepthForCourse int               `json:"max_depth_to_find_course"`
+	Fields            map[string]string `json:"fields"`
 }
 
 //Search by policy json files inside policyPath every 10s
