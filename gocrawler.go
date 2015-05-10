@@ -1,11 +1,11 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"time"
 
 	"github.com/codegangsta/cli"
+	"github.com/devton/xporter/crawler"
 	"github.com/devton/xporter/policies"
 	"github.com/fatih/color"
 )
@@ -27,7 +27,7 @@ func main() {
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "crawled-files, cf",
-					Value: "/path/to/crawled_data/",
+					Value: "/path/to/.crawled_data/",
 					Usage: "folder with downloaded HTML pages",
 				},
 				cli.StringFlag{
@@ -50,7 +50,7 @@ func main() {
 				color.Green("starting crawler...")
 				for {
 					policiesFound := policies.FindPolicies(c.String("policies-path"))
-					fmt.Printf("policies found -> \n%v\n", policiesFound)
+					crawler.StartOver(policiesFound, c.String("crawled-files"))
 					select {
 					case <-time.After(30 * time.Minute):
 						color.Green("rerunning crawler... ;)")

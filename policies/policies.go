@@ -13,6 +13,12 @@ import (
 var policyLogTag = "[policy-finder]"
 var policiesFound []string
 
+type Policy struct {
+	DomainFolder      string   `json:"domain_folder"`
+	CoursePaths       []string `json:"course_paths"`
+	MaxDepthForCourse int      `json:"max_depth_to_find_course"`
+}
+
 //Search by policy json files inside policyPath every 10s
 func FindPolicies(policyPath string) []string {
 	fmt.Printf("%s looking for policies at %s\n",
