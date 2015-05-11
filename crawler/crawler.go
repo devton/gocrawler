@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
@@ -90,10 +91,26 @@ func SearchDataFor(p *policies.Policy) error {
 
 			b, _ := os.Open(item)
 			queryDoc, _ := goquery.NewDocumentFromReader(b)
+			var body = map[string]string{}
 
 			for k, v := range p.Fields {
-				fmt.Printf("%s -> %s\n", k, queryDoc.Find(v).Text())
+				selector := queryDoc.Find(v["selector"])
+
+				if filterString, ok := v["filters"]; ok {
+					filter := strings.Split(filterString, ".")
+					if len(filter) > 1 {
+						switch filter[0] {
+						case "attr":
+							body[k] = selector.AttrOr(filter[1], "")
+						}
+					}
+
+				} else {
+					body[k] = selector.Text()
+				}
 			}
+
+			fmt.Printf("%#v", body)
 			b.Close()
 		}
 	}
