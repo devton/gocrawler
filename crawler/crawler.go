@@ -62,18 +62,14 @@ func AsyncCrawler(policyPath string, c chan map[string][]*ScrapedData) {
 	fmt.Printf("%s", xutils.ColorSprint(color.FgCyan, "."))
 	body, err := ioutil.ReadFile(policyPath)
 	if err != nil {
-		fmt.Errorf("%s can't read file %s...\n",
-			PolicyCrawlerLabel(policyPath),
-			xutils.ColorSprint(color.FgGreen, policyPath))
+		fmt.Errorf("can't read file %s...\n", policyPath)
 	}
 
 	var currentPolicy policies.Policy
 
 	dec := json.NewDecoder(bytes.NewReader(body))
 	if err := dec.Decode(&currentPolicy); err != nil {
-		fmt.Errorf("%s can't parse policy file %s...\n",
-			PolicyCrawlerLabel(policyPath),
-			xutils.ColorSprint(color.FgGreen, policyPath))
+		fmt.Errorf("can't parse policy file %s...\n", policyPath)
 	}
 
 	data := ScrapeData(&currentPolicy)
@@ -82,18 +78,13 @@ func AsyncCrawler(policyPath string, c chan map[string][]*ScrapedData) {
 	}
 }
 
-func PolicyCrawlerLabel(policyPath string) string {
-	return xutils.ColorSprint(color.FgCyan,
-		fmt.Sprintf("[policy-crawler %s]", filepath.Base(policyPath)))
-}
-
 func ScrapeData(p *policies.Policy) []*ScrapedData {
 	coursePath := path.Join(crawledDataFolder, p.DomainFolder)
 	totalScrapedObjects := []*ScrapedData{}
 	totalFiles := 0
 
 	for _, cpath := range p.CoursePaths {
-		files := GetFilesOnDir(path.Join(coursePath, cpath), 0, p.MaxDepthForCourse)
+		files := GetFilesOnDir(path.Join(coursePath, cpath), 0, p.MaxDepthForFindResource)
 		scrapedChannel := make(chan *ScrapedData, len(files))
 		totalFiles += len(files)
 
