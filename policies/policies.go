@@ -42,9 +42,7 @@ func FindPolicies(policyPath string) []string {
 
 func PolicyWalk(path string, info os.FileInfo, err error) error {
 	if info != nil && !info.IsDir() && filepath.Ext(path) == ".json" {
-		fmt.Printf("%s check policy file %s\n",
-			xutils.ColorSprint(color.FgMagenta, policyLogTag),
-			xutils.ColorSprint(color.FgGreen, info.Name()))
+		fmt.Printf("%s", xutils.ColorSprint(color.FgMagenta, "."))
 
 		if !xutils.StringInSlice(path, policiesFound) {
 			policiesFound = append(policiesFound, path)

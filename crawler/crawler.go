@@ -20,40 +20,51 @@ import (
 var crawlerLogTag = "[crawler]"
 var crawledDataFolder string
 
-func StartOver(policiesFound []string, dataFolder string) error {
-	runningOn := make(chan string, len(policiesFound))
+type ScrapedData struct {
+	Fields map[string]string `json:"fields"`
+}
+
+func ScrapOver(policiesFound []string, dataFolder string) (scrapedObjects map[string][]*ScrapedData, totalObjects int) {
+	runningOn := make(chan map[string][]*ScrapedData, len(policiesFound))
 	responses := []string{}
+	totalScrapedObjects := map[string][]*ScrapedData{}
+	totalObjects = 0
 	crawledDataFolder = dataFolder
 
+	fmt.Print("crawling for policies -> ")
 	for _, policy := range policiesFound {
-		fmt.Printf("%s runing for policy -> %s\n",
-			xutils.ColorSprint(color.FgMagenta, crawlerLogTag),
-			xutils.ColorSprint(color.FgGreen, filepath.Base(policy)))
-
+		fmt.Printf(" %s", xutils.ColorSprint(color.FgMagenta, filepath.Base(policy)))
 		go AsyncCrawler(policy, runningOn)
 	}
 
 	for {
 		select {
 		case result := <-runningOn:
-			responses = append(responses, result)
+			for key, data := range result {
+				responses = append(responses, key)
+				totalObjects += len(data)
+				for _, item := range data {
+					totalScrapedObjects[key] = append(totalScrapedObjects[key], item)
+				}
+			}
+
 			if len(responses) == len(policiesFound) {
-				fmt.Printf("\ndone all\n")
-				return nil
+				return totalScrapedObjects, totalObjects
 			}
 		case <-time.After(50 * time.Millisecond):
 		}
 	}
+
+	return totalScrapedObjects, totalObjects
 }
 
-func AsyncCrawler(policyPath string, c chan string) {
-	fmt.Printf("%s starting...\n", PolicyCrawlerLabel(policyPath))
+func AsyncCrawler(policyPath string, c chan map[string][]*ScrapedData) {
+	fmt.Printf("%s", xutils.ColorSprint(color.FgCyan, "."))
 	body, err := ioutil.ReadFile(policyPath)
 	if err != nil {
 		fmt.Errorf("%s can't read file %s...\n",
 			PolicyCrawlerLabel(policyPath),
 			xutils.ColorSprint(color.FgGreen, policyPath))
-		c <- policyPath
 	}
 
 	var currentPolicy policies.Policy
@@ -63,14 +74,11 @@ func AsyncCrawler(policyPath string, c chan string) {
 		fmt.Errorf("%s can't parse policy file %s...\n",
 			PolicyCrawlerLabel(policyPath),
 			xutils.ColorSprint(color.FgGreen, policyPath))
-		c <- policyPath
 	}
 
-	if err := SearchDataFor(&currentPolicy); err != nil {
-		fmt.Errorf("%s search on crawled data folder for policy %s...\n",
-			PolicyCrawlerLabel(policyPath),
-			xutils.ColorSprint(color.FgGreen, policyPath))
-		c <- policyPath
+	data := ScrapeData(&currentPolicy)
+	c <- map[string][]*ScrapedData{
+		policyPath: data,
 	}
 }
 
@@ -79,42 +87,59 @@ func PolicyCrawlerLabel(policyPath string) string {
 		fmt.Sprintf("[policy-crawler %s]", filepath.Base(policyPath)))
 }
 
-func SearchDataFor(p *policies.Policy) error {
+func ScrapeData(p *policies.Policy) []*ScrapedData {
 	coursePath := path.Join(crawledDataFolder, p.DomainFolder)
+	totalScrapedObjects := []*ScrapedData{}
+	totalFiles := 0
+
 	for _, cpath := range p.CoursePaths {
 		files := GetFilesOnDir(path.Join(coursePath, cpath), 0, p.MaxDepthForCourse)
+		scrapedChannel := make(chan *ScrapedData, len(files))
+		totalFiles += len(files)
 
-		for _, item := range files {
-			fmt.Printf("%s scraping page file -> %s\n",
-				xutils.ColorSprint(color.FgYellow, "[crawler-scraper]"),
-				xutils.ColorSprint(color.FgGreen, item))
+		for _, it := range files {
+			go AsyncScrape(it, p, scrapedChannel)
+		}
 
-			b, _ := os.Open(item)
-			queryDoc, _ := goquery.NewDocumentFromReader(b)
-			var body = map[string]string{}
-
-			for k, v := range p.Fields {
-				selector := queryDoc.Find(v["selector"])
-
-				if filterString, ok := v["filters"]; ok {
-					filter := strings.Split(filterString, ".")
-					if len(filter) > 1 {
-						switch filter[0] {
-						case "attr":
-							body[k] = selector.AttrOr(filter[1], "")
-						}
-					}
-
-				} else {
-					body[k] = selector.Text()
+		for {
+			select {
+			case asyncResult := <-scrapedChannel:
+				fmt.Printf("%s", xutils.ColorSprint(color.FgGreen, "."))
+				totalScrapedObjects = append(totalScrapedObjects, asyncResult)
+				if len(totalScrapedObjects) == len(files) {
+					return totalScrapedObjects
 				}
 			}
-
-			fmt.Printf("%#v", body)
-			b.Close()
 		}
 	}
 
+	return totalScrapedObjects
+}
+
+func AsyncScrape(item string, p *policies.Policy, c chan *ScrapedData) error {
+	b, _ := os.Open(item)
+	queryDoc, _ := goquery.NewDocumentFromReader(b)
+	var body = map[string]string{}
+
+	for k, v := range p.Fields {
+		selector := queryDoc.Find(v["selector"])
+
+		if filterString, ok := v["filters"]; ok {
+			filter := strings.Split(filterString, ".")
+			if len(filter) > 1 {
+				switch filter[0] {
+				case "attr":
+					body[k] = selector.AttrOr(filter[1], "")
+				}
+			}
+
+		} else {
+			body[k] = selector.Text()
+		}
+	}
+
+	b.Close()
+	c <- &ScrapedData{Fields: body}
 	return nil
 }
 

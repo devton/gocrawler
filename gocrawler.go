@@ -1,12 +1,18 @@
 package main
 
 import (
+	"encoding/json"
+	"io/ioutil"
+	"log"
 	"os"
+	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/codegangsta/cli"
 	"github.com/devton/xporter/crawler"
 	"github.com/devton/xporter/policies"
+	"github.com/devton/xporter/xutils"
 	"github.com/fatih/color"
 )
 
@@ -36,21 +42,36 @@ func main() {
 					Usage: "folder with json policies to extract data",
 				},
 				cli.StringFlag{
-					Name:  "elastic-url, eurl",
-					Value: "http://127.0.0.1:9200",
-					Usage: "elastic search host url",
-				},
-				cli.StringFlag{
-					Name:  "default-es-index",
-					Value: "xported-documents",
-					Usage: "default elastic search index to save extracted info",
+					Name:  "output-files, of",
+					Value: "gocrawler-output",
+					Usage: "default output json files",
 				},
 			},
 			Action: func(c *cli.Context) {
 				color.Green("starting crawler...")
 				for {
+					//Find policies
 					policiesFound := policies.FindPolicies(c.String("policies-path"))
-					crawler.StartOver(policiesFound, c.String("crawled-files"))
+
+					startCrawlingAt := time.Now()
+					//Scrap data from files using rules descibres at policies found
+					scrapedData, totalObjects := crawler.ScrapOver(policiesFound, c.String("crawled-files"))
+					color.Magenta("Total files parsed -> %d", totalObjects)
+
+					//Save scraped data into .json files
+					existsPath, _ := xutils.ExistsPath(c.String("output-files"))
+					if !existsPath {
+						os.MkdirAll(c.String("output-files"), 0755)
+					}
+
+					for k, v := range scrapedData {
+						color.Yellow("saving json file for policy -> %s", path.Join(c.String("output-files"), filepath.Base(k)))
+						jsonData, _ := json.Marshal(v)
+						ioutil.WriteFile(path.Join(c.String("output-files"), filepath.Base(k)), jsonData, 0755)
+					}
+
+					elapsedCrawlingTime := time.Since(startCrawlingAt)
+					log.Printf("scraping total time took %s", elapsedCrawlingTime)
 					select {
 					case <-time.After(30 * time.Minute):
 						color.Green("rerunning crawler... ;)")
