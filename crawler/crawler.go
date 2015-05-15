@@ -21,7 +21,8 @@ var crawlerLogTag = "[crawler]"
 var crawledDataFolder string
 
 type ScrapedData struct {
-	Fields map[string]string `json:"fields"`
+	FilePath string            `json:"filepath"`
+	Fields   map[string]string `json:"fields"`
 }
 
 func ScrapOver(policiesFound []string, dataFolder string) (scrapedObjects map[string][]*ScrapedData, totalObjects int) {
@@ -62,19 +63,18 @@ func AsyncCrawler(policyPath string, c chan map[string][]*ScrapedData) {
 	fmt.Printf("%s", xutils.ColorSprint(color.FgCyan, "."))
 	body, err := ioutil.ReadFile(policyPath)
 	if err != nil {
-		fmt.Errorf("can't read file %s...\n", policyPath)
+		color.Red("can't read file %s -> %#v", filepath.Base(policyPath), err)
 	}
 
 	var currentPolicy policies.Policy
 
 	dec := json.NewDecoder(bytes.NewReader(body))
 	if err := dec.Decode(&currentPolicy); err != nil {
-		fmt.Errorf("can't parse policy file %s...\n", policyPath)
+		color.Red("can't parse file %s -> %#v", filepath.Base(policyPath), err)
 	}
 
-	data := ScrapeData(&currentPolicy)
 	c <- map[string][]*ScrapedData{
-		policyPath: data,
+		filepath.Base(policyPath): ScrapeData(&currentPolicy),
 	}
 }
 
@@ -130,7 +130,10 @@ func AsyncScrape(item string, p *policies.Policy, c chan *ScrapedData) error {
 	}
 
 	b.Close()
-	c <- &ScrapedData{Fields: body}
+	c <- &ScrapedData{
+		FilePath: item,
+		Fields:   body,
+	}
 	return nil
 }
 
