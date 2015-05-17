@@ -1,0 +1,14 @@
+{
+  "domain_folder": "foo",
+  "resource_paths": ["bar"],
+  "max_depth_to_find_resource": 1,
+  "type": "foo-bar",
+  "fields": {
+    "title": {
+      "selector": "title"
+    },
+    "description": {
+      "selector": "meta[name='description']"
+    }
+  }
+}

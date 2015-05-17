@@ -1,13 +1,10 @@
 package crawler
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -25,7 +22,7 @@ type ScrapedData struct {
 	Fields   map[string]string `json:"fields"`
 }
 
-func ScrapOver(policiesFound []string, dataFolder string) (scrapedObjects map[string][]*ScrapedData, totalObjects int) {
+func ScrapOver(policiesFound []*policies.Policy, dataFolder string) (scrapedObjects map[string][]*ScrapedData, totalObjects int) {
 	runningOn := make(chan map[string][]*ScrapedData, len(policiesFound))
 	responses := []string{}
 	totalScrapedObjects := map[string][]*ScrapedData{}
@@ -34,7 +31,7 @@ func ScrapOver(policiesFound []string, dataFolder string) (scrapedObjects map[st
 
 	fmt.Print("crawling for policies -> ")
 	for _, policy := range policiesFound {
-		fmt.Printf(" %s", xutils.ColorSprint(color.FgMagenta, filepath.Base(policy)))
+		fmt.Printf(" %s", xutils.ColorSprint(color.FgMagenta, policy.FileName))
 		go AsyncCrawler(policy, runningOn)
 	}
 
@@ -59,22 +56,9 @@ func ScrapOver(policiesFound []string, dataFolder string) (scrapedObjects map[st
 	return totalScrapedObjects, totalObjects
 }
 
-func AsyncCrawler(policyPath string, c chan map[string][]*ScrapedData) {
-	fmt.Printf("%s", xutils.ColorSprint(color.FgCyan, "."))
-	body, err := ioutil.ReadFile(policyPath)
-	if err != nil {
-		color.Red("can't read file %s -> %#v", filepath.Base(policyPath), err)
-	}
-
-	var currentPolicy policies.Policy
-
-	dec := json.NewDecoder(bytes.NewReader(body))
-	if err := dec.Decode(&currentPolicy); err != nil {
-		color.Red("can't parse file %s -> %#v", filepath.Base(policyPath), err)
-	}
-
+func AsyncCrawler(currentPolicy *policies.Policy, c chan map[string][]*ScrapedData) {
 	c <- map[string][]*ScrapedData{
-		filepath.Base(policyPath): ScrapeData(&currentPolicy),
+		currentPolicy.FileName: ScrapeData(currentPolicy),
 	}
 }
 
@@ -83,7 +67,7 @@ func ScrapeData(p *policies.Policy) []*ScrapedData {
 	totalScrapedObjects := []*ScrapedData{}
 	totalFiles := 0
 
-	for _, cpath := range p.CoursePaths {
+	for _, cpath := range p.ResourcePaths {
 		files := GetFilesOnDir(path.Join(coursePath, cpath), 0, p.MaxDepthForFindResource)
 		scrapedChannel := make(chan *ScrapedData, len(files))
 		totalFiles += len(files)
@@ -144,8 +128,10 @@ func GetFilesOnDir(filePath string, depth int, maxDepth int) []string {
 		files, _ := ioutil.ReadDir(filePath)
 		for _, item := range files {
 			if item.IsDir() {
-				for _, recItem := range GetFilesOnDir(
-					path.Join(filePath, item.Name()), (depth + 1), maxDepth) {
+				subFiles := GetFilesOnDir(
+					path.Join(filePath, item.Name()), (depth + 1), maxDepth)
+
+				for _, recItem := range subFiles {
 					tempFiles = append(tempFiles, recItem)
 				}
 			} else {

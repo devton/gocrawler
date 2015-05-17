@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -71,7 +70,7 @@ func main() {
 					}
 
 					elapsedCrawlingTime := time.Since(startCrawlingAt)
-					log.Printf("scraping total time took %s", elapsedCrawlingTime)
+					color.Green("scraping total time took %s", elapsedCrawlingTime)
 					select {
 					case <-time.After(30 * time.Minute):
 						color.Green("rerunning crawler... ;)")
