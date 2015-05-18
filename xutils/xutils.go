@@ -18,8 +18,8 @@ func StringInSlice(a string, list []string) bool {
 }
 
 func ColorSprint(c color.Attribute, msg string) string {
-	green := color.New(c).SprintFunc()
-	return green(msg)
+	colorWrapper := color.New(c).SprintFunc()
+	return colorWrapper(msg)
 }
 
 func ExistsPath(path string) (bool, error) {
