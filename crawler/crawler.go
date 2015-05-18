@@ -2,7 +2,6 @@ package crawler
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"strings"
@@ -14,7 +13,6 @@ import (
 	"github.com/fatih/color"
 )
 
-var crawlerLogTag = "[crawler]"
 var crawledDataFolder string
 
 type ScrapedData struct {
@@ -68,7 +66,7 @@ func ScrapeData(p *policies.Policy) []*ScrapedData {
 	totalFiles := 0
 
 	for _, cpath := range p.ResourcePaths {
-		files := GetFilesOnDir(path.Join(coursePath, cpath), 0, p.MaxDepthForFindResource)
+		files := xutils.GetFilesOnDir(path.Join(coursePath, cpath), 0, p.MaxDepthForFindResource)
 		scrapedChannel := make(chan *ScrapedData, len(files))
 		totalFiles += len(files)
 
@@ -119,26 +117,4 @@ func AsyncScrape(item string, p *policies.Policy, c chan *ScrapedData) error {
 		Fields:   body,
 	}
 	return nil
-}
-
-func GetFilesOnDir(filePath string, depth int, maxDepth int) []string {
-	tempFiles := []string{}
-
-	if depth <= maxDepth {
-		files, _ := ioutil.ReadDir(filePath)
-		for _, item := range files {
-			if item.IsDir() {
-				subFiles := GetFilesOnDir(
-					path.Join(filePath, item.Name()), (depth + 1), maxDepth)
-
-				for _, recItem := range subFiles {
-					tempFiles = append(tempFiles, recItem)
-				}
-			} else {
-				tempFiles = append(tempFiles, path.Join(filePath, item.Name()))
-			}
-		}
-	}
-
-	return tempFiles
 }
