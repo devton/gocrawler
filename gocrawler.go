@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/codegangsta/cli"
-	"github.com/devton/xporter/crawler"
-	"github.com/devton/xporter/policies"
-	"github.com/devton/xporter/xutils"
+	"github.com/devton/gocrawler/crawler"
+	"github.com/devton/gocrawler/policies"
+	"github.com/devton/gocrawler/xutils"
 	"github.com/fatih/color"
 )
 
@@ -55,7 +55,7 @@ func main() {
 					startCrawlingAt := time.Now()
 					//Scrap data from files using rules descibres at policies found
 					scrapedData, totalObjects := crawler.ScrapOver(policiesFound, c.String("crawled-files"))
-					color.Magenta("Total files parsed -> %d", totalObjects)
+					color.Magenta("\nTotal files parsed -> %d", totalObjects)
 
 					//Save scraped data into .json files
 					existsPath, _ := xutils.ExistsPath(c.String("output-files"))
