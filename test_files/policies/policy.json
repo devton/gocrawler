@@ -1,14 +1,19 @@
 {
-  "domain_folder": "foo",
-  "resource_paths": ["bar"],
-  "max_depth_to_find_resource": 1,
+  "domain_folder": "example.com",
+  "resource_paths": ["path"],
+  "max_depth_to_find_resource": 3,
   "type": "foo-bar",
   "fields": {
-    "title": {
-      "selector": "title"
+    "text": {
+      "selector": "p"
     },
-    "description": {
-      "selector": "meta[name='description']"
+    "link": {
+      "selector": "a",
+      "filters": "attr.href"
+    },
+    "list": {
+      "selector": "ul li a",
+      "filters": "map|attr.href"
     }
   }
 }
